@@ -1,103 +1,221 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Paper,
+  TextField,
+  Typography,
+  Alert,
+  Modal,
+} from '@mui/material';
+
+export default function Login() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+
+  // Estado para el modal de registro
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [regUsername, setRegUsername] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [registerMsg, setRegisterMsg] = useState('');
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!username || !password) {
+      setErrorMsg('Por favor completa todos los campos.');
+      return;
+    }
+
+    setErrorMsg('');
+    setLoading(true);
+
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    try {
+      const response = await fetch('http://localhost:8000/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+      });
+
+      if (!response.ok) throw new Error('Credenciales inválidas');
+
+      const data = await response.json();
+      localStorage.setItem('token', data.access_token);
+      router.push('/panel');
+    } catch (err) {
+      setErrorMsg('Login fallido: Credenciales incorrectas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!regUsername || !regEmail || !regPassword) {
+      setRegisterMsg('Completa todos los campos.');
+      return;
+    }
+
+    setRegisterMsg('');
+    setRegisterLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/user/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: regUsername,
+          email: regEmail,
+          password: regPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Error al crear usuario');
+      }
+
+      setRegisterMsg('¡Usuario creado exitosamente!');
+      setTimeout(() => {
+        setRegisterOpen(false);
+        setRegUsername('');
+        setRegEmail('');
+        setRegPassword('');
+        setRegisterMsg('');
+      }, 1500);
+    } catch (err: any) {
+      setRegisterMsg(err.message || 'Error inesperado');
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
+  const modalStyle = {
+    position: 'absolute' as const,
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    p: 4,
+    borderRadius: 2,
+    boxShadow: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  };
+
+  if (!mounted) return null;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <Container className="h-screen flex items-center justify-center">
+      <Paper elevation={4} className="p-8 max-w-md w-full shadow-md">
+        <Typography variant="h5" className="mb-6 font-semibold text-center">
+          Iniciar sesión
+        </Typography>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+        {errorMsg && (
+          <Alert severity="error" className="mb-4">
+            {errorMsg}
+          </Alert>
+        )}
+
+        <form onSubmit={handleLogin}>
+          <Box display="flex" flexDirection="column" gap={3}>
+            <TextField
+              label="Usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              fullWidth
+              required
+              error={!username && !!errorMsg}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <TextField
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              required
+              error={!password && !!errorMsg}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              disabled={loading}
+              startIcon={loading && <CircularProgress size={20} />}
+            >
+              {loading ? 'Ingresando...' : 'Ingresar'}
+            </Button>
+          </Box>
+        </form>
+
+        <Box mt={4} textAlign="center">
+          <Typography variant="body2">¿No tienes una cuenta?</Typography>
+          <Button onClick={() => setRegisterOpen(true)}>Crear cuenta nueva</Button>
+        </Box>
+      </Paper>
+
+      {/* Modal para registro de usuario */}
+      <Modal open={registerOpen} onClose={() => setRegisterOpen(false)}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6">Crear nuevo usuario</Typography>
+          <TextField
+            label="Usuario"
+            value={regUsername}
+            onChange={(e) => setRegUsername(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Correo"
+            type="email"
+            value={regEmail}
+            onChange={(e) => setRegEmail(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Contraseña"
+            type="password"
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+            fullWidth
+          />
+          {registerMsg && (
+            <Alert severity={registerMsg.includes('exitosamente') ? 'success' : 'error'}>
+              {registerMsg}
+            </Alert>
+          )}
+          <Button
+            variant="contained"
+            onClick={handleRegister}
+            disabled={registerLoading}
           >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            {registerLoading ? 'Registrando...' : 'Registrar'}
+          </Button>
+        </Box>
+      </Modal>
+    </Container>
   );
 }
