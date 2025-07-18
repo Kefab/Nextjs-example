@@ -64,7 +64,7 @@ export default function Login() {
       localStorage.setItem('token', data.access_token);
       router.push('/panel');
     } catch (err) {
-      setErrorMsg('Login fallido: Credenciales incorrectas.');
+      setErrorMsg('Loginsss fallido: Credenciales incorrectas.');
     } finally {
       setLoading(false);
     }
